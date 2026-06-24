@@ -63,6 +63,70 @@ app.get("/api/homepage/cards/mobiles", async (req, res) => {
   }
 });
 
+function cleanProduct(product) {
+  const p = product.Product || product;
+
+  return {
+    id: p.id,
+    name: p.name || p.title || "",
+    price: p.unit_price || p.price || p.sale_price || 0,
+    image:
+      p.image ||
+      p.photo ||
+      p.main_image ||
+      p.thumbnail ||
+      "",
+    url: `https://www.mrphonelb.com/contents/product_view/${p.id}`
+  };
+}
+
+app.get("/api/homepage-json/mobiles", async (req, res) => {
+  try {
+    const cacheKey = "json_mobiles";
+    const cached = cache.get(cacheKey);
+
+    if (cached) {
+      return res.json({ cached: true, products: cached });
+    }
+
+    const response = await axios.get(`${process.env.DAFTRA_API_URL}/products`, {
+      headers: {
+        apikey: process.env.DAFTRA_API_KEY,
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      params: {
+        cat_id: 87,
+        limit: 12
+      }
+    });
+
+    const rawProducts =
+      response.data?.data ||
+      response.data?.products ||
+      response.data?.Product ||
+      response.data ||
+      [];
+
+    const products = Array.isArray(rawProducts)
+      ? rawProducts.map(cleanProduct)
+      : [];
+
+    cache.set(cacheKey, products);
+
+    res.json({
+      cached: false,
+      products
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      error: true,
+      message: error.response?.data || error.message
+    });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
