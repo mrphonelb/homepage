@@ -8,6 +8,9 @@ const app = express();
 app.use(cors());
 
 const WEBSITE_URL = "https://www.mrphonelb.com";
+const DAFTRA_API_URL = process.env.DAFTRA_API_URL || "https://www.mrphonelb.com/api2";
+const DAFTRA_API_TOKEN = process.env.DAFTRA_API_TOKEN;
+
 const cache = new NodeCache({ stdTTL: 600 }); // 10 minutes
 
 app.get("/", (req, res) => {
@@ -17,6 +20,7 @@ app.get("/", (req, res) => {
   });
 });
 
+/* OPTION A - old test: same Daftra HTML cards */
 async function getProductCards(catIds, limit = 12) {
   const allCards = [];
 
@@ -63,60 +67,98 @@ app.get("/api/homepage/cards/mobiles", async (req, res) => {
   }
 });
 
-function cleanProduct(product) {
-  const p = product.Product || product;
+/* OPTION B - fast JSON products */
+function cleanProduct(item) {
+  const p = item.Product || item;
+
+  const image =
+    p.ProductImage?.find(img => String(img.default) === "1")?.file_full_path ||
+    p.ProductImage?.[0]?.file_full_path ||
+    item.ProductImage?.find(img => String(img.default) === "1")?.file_full_path ||
+    item.ProductImage?.[0]?.file_full_path ||
+    item.ProductMasterImage?.file_full_path ||
+    p.ProductMasterImage?.file_full_path ||
+    "";
 
   return {
     id: p.id,
-    name: p.name || p.title || "",
-    price: p.unit_price || p.price || p.sale_price || 0,
-    image:
-      p.image ||
-      p.photo ||
-      p.main_image ||
-      p.thumbnail ||
-      "",
-    url: `https://www.mrphonelb.com/contents/product_view/${p.id}`
+    name: p.name || "",
+    price: Number(p.unit_price || 0),
+    image,
+    url: `${WEBSITE_URL}/contents/product_view/${p.id}`,
+    brand: p.brand || "",
+    category: p.category || "",
+    availabe_online: p.availabe_online,
+    status: p.status,
+    deactivate: p.deactivate
   };
+}
+
+function isOnlineProduct(item) {
+  const p = item.Product || item;
+
+  return (
+    String(p.availabe_online) === "1" &&
+    String(p.status) === "0" &&
+    String(p.deactivate || "0") === "0"
+  );
+}
+
+async function fetchDaftraProductsByCategory(catId, limit = 12) {
+  const response = await axios.get(`${DAFTRA_API_URL}/products`, {
+    headers: {
+      apikey: DAFTRA_API_TOKEN,
+      "Content-Type": "application/json",
+      Accept: "application/json"
+    },
+    params: {
+      cat_id: catId,
+      limit: limit
+    }
+  });
+
+  const rawProducts =
+    response.data?.data ||
+    response.data?.products ||
+    response.data?.Product ||
+    response.data ||
+    [];
+
+  return Array.isArray(rawProducts) ? rawProducts : [];
 }
 
 app.get("/api/homepage-json/mobiles", async (req, res) => {
   try {
-    const cacheKey = "json_mobiles";
+    const cacheKey = "json_mobiles_v2";
     const cached = cache.get(cacheKey);
 
     if (cached) {
       return res.json({ cached: true, products: cached });
     }
 
-    const response = await axios.get(`${process.env.DAFTRA_API_URL}/products`, {
-      headers: {
-        apikey: process.env.DAFTRA_API_TOKEN,
-        "Content-Type": "application/json",
-        Accept: "application/json"
-      },
-      params: {
-        cat_id: 87,
-        limit: 12
-      }
-    });
+    // Same mobile categories from your current homepage
+    const categoryIds = [6, 134, 274, 135];
 
-    const rawProducts =
-      response.data?.data ||
-      response.data?.products ||
-      response.data?.Product ||
-      response.data ||
-      [];
+    let allProducts = [];
 
-    const products = Array.isArray(rawProducts)
-      ? rawProducts.map(cleanProduct)
-      : [];
+    for (const catId of categoryIds) {
+      const products = await fetchDaftraProductsByCategory(catId, 20);
+      allProducts = allProducts.concat(products);
 
-    cache.set(cacheKey, products);
+      if (allProducts.length >= 30) break;
+    }
+
+    const cleanProducts = allProducts
+      .filter(isOnlineProduct)
+      .map(cleanProduct)
+      .filter(p => p.id && p.name && p.image)
+      .slice(0, 12);
+
+    cache.set(cacheKey, cleanProducts);
 
     res.json({
       cached: false,
-      products
+      products: cleanProducts
     });
 
   } catch (error) {
