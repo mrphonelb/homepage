@@ -29,8 +29,8 @@ app.get("/api/homepage/mobiles", async (req, res) => {
 
     const response = await axios.get(`${DAFTRA_API_URL}/products`, {
       headers: {
-        Authorization: `Bearer ${DAFTRA_API_TOKEN}`
-      },
+  APIKEY: DAFTRA_API_TOKEN
+},
       params: {
         cat_id: 87,
         limit: 12
