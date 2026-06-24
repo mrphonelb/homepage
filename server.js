@@ -91,7 +91,7 @@ app.get("/api/homepage-json/mobiles", async (req, res) => {
 
     const response = await axios.get(`${process.env.DAFTRA_API_URL}/products`, {
       headers: {
-        apikey: process.env.DAFTRA_API_KEY,
+        apikey: process.env.DAFTRA_API_TOKEN,
         "Content-Type": "application/json",
         Accept: "application/json"
       },
