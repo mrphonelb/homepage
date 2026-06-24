@@ -28,8 +28,8 @@ app.get("/api/homepage/mobiles", async (req, res) => {
     }
 
     const response = await axios.get(`${DAFTRA_API_URL}/products`, {
-      headers: {
-  APIKEY: DAFTRA_API_TOKEN
+    headers: {
+  apikey: DAFTRA_API_TOKEN
 },
       params: {
         cat_id: 87,
