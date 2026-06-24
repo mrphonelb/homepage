@@ -1,14 +1,13 @@
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
+const cheerio = require("cheerio");
 const NodeCache = require("node-cache");
 
 const app = express();
 app.use(cors());
 
-const DAFTRA_API_URL = process.env.DAFTRA_API_URL || "https://www.mrphonelb.com/api2";
-const DAFTRA_API_TOKEN = process.env.DAFTRA_API_TOKEN;
-
+const WEBSITE_URL = "https://www.mrphonelb.com";
 const cache = new NodeCache({ stdTTL: 600 }); // 10 minutes
 
 app.get("/", (req, res) => {
@@ -18,38 +17,48 @@ app.get("/", (req, res) => {
   });
 });
 
-app.get("/api/homepage/mobiles", async (req, res) => {
-  try {
-    const cacheKey = "homepage_mobiles";
-    const cached = cache.get(cacheKey);
+async function getProductCards(catIds, limit = 12) {
+  const allCards = [];
 
-    if (cached) {
-      return res.json({ cached: true, products: cached });
-    }
+  for (const catId of catIds) {
+    const url = `${WEBSITE_URL}/contents/products_list?cat_id=${catId}`;
+    const response = await axios.get(url);
+    const $ = cheerio.load(response.data);
 
-    const response = await axios.get(`${DAFTRA_API_URL}/products`, {
-    headers: {
-  apikey: DAFTRA_API_TOKEN
-},
-      params: {
-        cat_id: 87,
-        limit: 12
+    $(".product").each((i, el) => {
+      if (allCards.length < limit) {
+        allCards.push($.html(el));
       }
     });
 
-    const products = response.data;
+    if (allCards.length >= limit) break;
+  }
 
-    cache.set(cacheKey, products);
+  return allCards;
+}
+
+app.get("/api/homepage/cards/mobiles", async (req, res) => {
+  try {
+    const cacheKey = "cards_mobiles";
+    const cached = cache.get(cacheKey);
+
+    if (cached) {
+      return res.json({ cached: true, cards: cached });
+    }
+
+    const cards = await getProductCards([6, 134, 274, 135], 12);
+
+    cache.set(cacheKey, cards);
 
     res.json({
       cached: false,
-      products
+      cards
     });
 
   } catch (error) {
     res.status(500).json({
       error: true,
-      message: error.response?.data || error.message
+      message: error.message
     });
   }
 });
