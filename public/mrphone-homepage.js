@@ -86,7 +86,6 @@ window.MrPhone = {
   }
 };
 
-<style>
   .mrp-products-grid{
     display:grid;
     grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
@@ -129,4 +128,3 @@ window.MrPhone = {
 .mrp-products-grid .add-to-cart-btn{
     width:100%;
 }
-</style>
