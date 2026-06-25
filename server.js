@@ -234,23 +234,42 @@ app.get("/api/homepage-section", async (req, res) => {
       return res.json({ cached: true, products: cached });
     }
 
-    let allProducts = [];
-
-    for (const catId of cats) {
-      const products = await fetchWebsiteProductsByCategory(catId);
-      allProducts = allProducts.concat(products);
-    }
-
     const seen = new Set();
+const buckets = [];
 
-    const cleanProducts = allProducts
-      .filter(p => p.id && p.name && p.image)
-      .filter(p => {
-        if (seen.has(String(p.id))) return false;
-        seen.add(String(p.id));
-        return true;
-      })
-      .slice(0, limit);
+for (const catId of cats) {
+  const products = await fetchWebsiteProductsByCategory(catId);
+
+  const clean = products.filter(p => {
+    if (!p.id || !p.name || !p.image) return false;
+    if (seen.has(String(p.id))) return false;
+    seen.add(String(p.id));
+    return true;
+  });
+
+  buckets.push(clean);
+}
+
+const mixedProducts = [];
+let round = 0;
+
+while (mixedProducts.length < limit) {
+  let added = false;
+
+  for (const bucket of buckets) {
+    if (bucket[round]) {
+      mixedProducts.push(bucket[round]);
+      added = true;
+
+      if (mixedProducts.length >= limit) break;
+    }
+  }
+
+  if (!added) break;
+  round++;
+}
+
+const cleanProducts = mixedProducts;
 
     cache.set(cacheKey, cleanProducts);
 
