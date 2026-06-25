@@ -180,6 +180,37 @@ const cleanProducts = allProducts
   }
 });
 
+async function fetchWebsiteProductsByCategory(catId) {
+  const url = `${WEBSITE_URL}/contents/products_list?cat_id=${catId}`;
+  const response = await axios.get(url);
+  const $ = cheerio.load(response.data);
+
+  const products = [];
+
+  $(".product").each((i, el) => {
+    const product = $(el);
+    const link = product.find("a").first();
+    const img = product.find("img").first();
+
+    products.push({
+      id: product.attr("data-product-id") || "",
+      name: product.attr("data-name") || link.attr("data-product-name") || product.find("h6").text().trim(),
+      price: Number(product.attr("data-price") || 0),
+      image: product.attr("data-image") || img.attr("src") || "",
+      url: link.attr("href")
+        ? `${WEBSITE_URL}${link.attr("href")}`
+        : "",
+      brand: product.attr("data-brand") || "",
+      category: product.attr("data-category") || "",
+      stock_balance: Number(product.attr("data-stock-balance") || 0),
+      currency: "USD",
+      add_to_cart: true
+    });
+  });
+
+  return products;
+}
+
 app.get("/api/homepage-section", async (req, res) => {
   try {
     const cats = String(req.query.cats || "")
@@ -187,7 +218,7 @@ app.get("/api/homepage-section", async (req, res) => {
       .map(x => x.trim())
       .filter(Boolean);
 
-    const limit = Number(req.query.limit || 12);
+    const limit = Number(req.query.limit || 16);
 
     if (!cats.length) {
       return res.status(400).json({
@@ -196,7 +227,7 @@ app.get("/api/homepage-section", async (req, res) => {
       });
     }
 
-    const cacheKey = `section_${cats.join("_")}_${limit}`;
+    const cacheKey = `section_html_${cats.join("_")}_${limit}`;
     const cached = cache.get(cacheKey);
 
     if (cached) {
@@ -206,17 +237,15 @@ app.get("/api/homepage-section", async (req, res) => {
     let allProducts = [];
 
     for (const catId of cats) {
-      const products = await fetchDaftraProductsByCategory(catId, 20);
+      const products = await fetchWebsiteProductsByCategory(catId);
       allProducts = allProducts.concat(products);
     }
 
     const seen = new Set();
 
     const cleanProducts = allProducts
-      .filter(isOnlineProduct)
-      .map(cleanProduct)
+      .filter(p => p.id && p.name && p.image)
       .filter(p => {
-        if (!p.id || !p.name || !p.image) return false;
         if (seen.has(String(p.id))) return false;
         seen.add(String(p.id));
         return true;
@@ -233,7 +262,7 @@ app.get("/api/homepage-section", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       error: true,
-      message: error.response?.data || error.message
+      message: error.message
     });
   }
 });
