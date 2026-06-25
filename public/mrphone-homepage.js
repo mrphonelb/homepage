@@ -18,30 +18,40 @@ window.MrPhone = {
     { wrapper:"carousel12-wrapper", swiperId:"carousel12-swiper", next:"carousel12-next", prev:"carousel12-prev", cats:[237,316,32,33] }
   ],
 
-  money(price){
+  money(price) {
     return "$" + Number(price || 0).toFixed(2);
   },
 
-  async getProducts(cats, limit = 16){
+  async getProducts(cats, limit = 16) {
     const url = `${this.api}/api/homepage-section?cats=${cats.join(",")}&limit=${limit}`;
     const res = await fetch(url);
-    if(!res.ok) throw new Error("Cannot load products");
+    if (!res.ok) throw new Error("Cannot load products");
     return await res.json();
   },
 
-  productCard(product){
-    const name = product.name || "";
+  escapeHtml(text) {
+    return String(text || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  },
+
+  productCard(product) {
+    const id = this.escapeHtml(product.id);
+    const name = this.escapeHtml(product.name || "");
     const price = Number(product.price || 0);
-    const image = product.image || "";
-    const brand = product.brand || "";
-    const category = product.category || "";
+    const image = this.escapeHtml(product.image || "");
+    const brand = this.escapeHtml(product.brand || "");
+    const category = this.escapeHtml(product.category || "");
     const stock = Number(product.stock_balance || 0);
-    const url = product.url || `/contents/product_view/${product.id}`;
+    const url = product.url || `/contents/product_view/${id}`;
 
     return `
       <div class="swiper-slide">
-        <div class="align-items-start d-flex flex-column h-100 mb-6 mb-lg-0 product px-5 px-lg-0 pb-4"
-          data-product-id="${product.id}"
+        <div class="mrp-fast-product product"
+          data-product-id="${id}"
           data-image="${image}"
           data-price="${price}"
           data-name="${name}"
@@ -49,22 +59,18 @@ window.MrPhone = {
           data-category="${category}"
           data-stock-balance="${stock}">
 
-          <a href="${url}" data-product-name="${name}"
-             class="text-decoration-none text-primary text-hover-black"
-             style="pointer-events:auto;">
-            <img src="${image}" alt="${name}"
-              class="product-img-sm img-fluid h-180px w-100 mx-auto img-cover mb-3"
-              loading="lazy">
-            <h6 class="fs-18 font-weight-bold mb-2">${name}</h6>
+          <a href="${url}" data-product-name="${name}" class="mrp-fast-link">
+            <div class="mrp-fast-img-wrap">
+              <img src="${image}" alt="${name}" loading="lazy">
+            </div>
+            <h6>${name}</h6>
           </a>
 
-          <div class="mb-3 font-weight-bold mt-auto">
-            <span class="text-black fs-24">${this.money(price)}</span>
+          <div class="mrp-fast-price">
+            <span>${this.money(price)}</span>
           </div>
 
-          <button data-name="sallamon"
-            class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16"
-            style="pointer-events:auto;">
+          <button data-name="sallamon" class="add-to-cart-btn btn btn-sm btn-primary text-uppercase font-weight-medium fs-16">
             <i class="fal fa-cart-plus mr-2"></i>Add to Cart
           </button>
         </div>
@@ -72,18 +78,18 @@ window.MrPhone = {
     `;
   },
 
-  async loadCarousel(item){
+  async loadCarousel(item) {
     const wrapper = document.getElementById(item.wrapper);
-    if(!wrapper) return;
+    if (!wrapper) return;
 
-    wrapper.innerHTML = `<p style="color:#111;padding:20px;">Loading products...</p>`;
+    wrapper.innerHTML = `<div class="mrp-loading">Loading products...</div>`;
 
-    try{
+    try {
       const data = await this.getProducts(item.cats, 16);
       const products = data.products || [];
 
-      if(!products.length){
-        wrapper.innerHTML = `<p style="color:#111;padding:20px;">No products available.</p>`;
+      if (!products.length) {
+        wrapper.innerHTML = `<div class="mrp-loading">No products available.</div>`;
         return;
       }
 
@@ -111,19 +117,19 @@ window.MrPhone = {
         }
       });
 
-    }catch(err){
+    } catch (err) {
       console.error(err);
-      wrapper.innerHTML = `<p style="color:red;padding:20px;">Error loading products.</p>`;
+      wrapper.innerHTML = `<div class="mrp-loading mrp-error">Error loading products.</div>`;
     }
   },
 
-  loadAllCarousels(){
+  loadAllCarousels() {
     this.carousels.forEach((item, index) => {
       setTimeout(() => this.loadCarousel(item), index * 150);
     });
   }
 };
 
-document.addEventListener("DOMContentLoaded", function(){
+document.addEventListener("DOMContentLoaded", function () {
   MrPhone.loadAllCarousels();
 });
