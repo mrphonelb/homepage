@@ -1,0 +1,42 @@
+.mrp-products-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+    gap:20px;
+    margin:30px 0;
+}
+
+.mrp-products-grid .product{
+    background:#fff;
+    border-radius:22px;
+    box-shadow:0 8px 25px rgba(0,0,0,.08);
+    padding:20px;
+    transition:.25s;
+}
+
+.mrp-products-grid .product:hover{
+    transform:translateY(-5px);
+}
+
+.mrp-products-grid img{
+    width:100%;
+    height:220px;
+    object-fit:contain;
+}
+
+.mrp-products-grid h6{
+    min-height:72px;
+    font-size:18px;
+    text-align:center;
+    margin-top:15px;
+}
+
+.mrp-products-grid .text-black{
+    font-size:34px;
+    font-weight:700;
+    display:block;
+    text-align:center;
+}
+
+.mrp-products-grid .add-to-cart-btn{
+    width:100%;
+}
