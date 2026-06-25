@@ -12,7 +12,8 @@ const WEBSITE_URL = "https://www.mrphonelb.com";
 const DAFTRA_API_URL = process.env.DAFTRA_API_URL || "https://www.mrphonelb.com/api2";
 const DAFTRA_API_TOKEN = process.env.DAFTRA_API_TOKEN;
 
-const cache = new NodeCache({ stdTTL: 120 });
+const cache = new NodeCache({ stdTTL: 0 });
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 app.get("/", (req, res) => {
   res.json({
@@ -221,61 +222,54 @@ app.get("/api/homepage-section", async (req, res) => {
     const limit = Number(req.query.limit || 16);
 
     if (!cats.length) {
-      return res.status(400).json({
-        error: true,
-        message: "Missing cats parameter"
-      });
+      return res.status(400).json({ error: true, message: "Missing cats parameter" });
     }
 
     const cacheKey = `section_html_${cats.join("_")}_${limit}`;
     const cached = cache.get(cacheKey);
+    const now = Date.now();
 
-    if (cached) {
-      return res.json({ cached: true, products: cached });
+    if (cached && cached.products) {
+      res.json({
+        cached: true,
+        refreshing: now - cached.createdAt > CACHE_TTL,
+        products: cached.products
+      });
+
+      if (now - cached.createdAt > CACHE_TTL && !cached.refreshing) {
+        cached.refreshing = true;
+        cache.set(cacheKey, cached);
+
+        buildHomepageSection(cats, limit)
+          .then(products => {
+            cache.set(cacheKey, {
+              products,
+              createdAt: Date.now(),
+              refreshing: false
+            });
+          })
+          .catch(err => {
+            console.error("Background refresh failed:", err.message);
+            cached.refreshing = false;
+            cache.set(cacheKey, cached);
+          });
+      }
+
+      return;
     }
 
-    const seen = new Set();
-const buckets = [];
+    const products = await buildHomepageSection(cats, limit);
 
-for (const catId of cats) {
-  const products = await fetchWebsiteProductsByCategory(catId);
-
-  const clean = products.filter(p => {
-    if (!p.id || !p.name || !p.image) return false;
-    if (seen.has(String(p.id))) return false;
-    seen.add(String(p.id));
-    return true;
-  });
-
-  buckets.push(clean);
-}
-
-const mixedProducts = [];
-let round = 0;
-
-while (mixedProducts.length < limit) {
-  let added = false;
-
-  for (const bucket of buckets) {
-    if (bucket[round]) {
-      mixedProducts.push(bucket[round]);
-      added = true;
-
-      if (mixedProducts.length >= limit) break;
-    }
-  }
-
-  if (!added) break;
-  round++;
-}
-
-const cleanProducts = mixedProducts;
-
-    cache.set(cacheKey, cleanProducts);
+    cache.set(cacheKey, {
+      products,
+      createdAt: Date.now(),
+      refreshing: false
+    });
 
     res.json({
       cached: false,
-      products: cleanProducts
+      refreshing: false,
+      products
     });
 
   } catch (error) {
@@ -294,6 +288,45 @@ app.get("/api/refresh-cache", (req, res) => {
     message: "Homepage cache cleared successfully"
   });
 });
+
+async function buildHomepageSection(cats, limit) {
+  const seen = new Set();
+  const buckets = [];
+
+  for (const catId of cats) {
+    const products = await fetchWebsiteProductsByCategory(catId);
+
+    const clean = products.filter(p => {
+      if (!p.id || !p.name || !p.image) return false;
+      if (seen.has(String(p.id))) return false;
+      seen.add(String(p.id));
+      return true;
+    });
+
+    buckets.push(clean);
+  }
+
+  const mixedProducts = [];
+  let round = 0;
+
+  while (mixedProducts.length < limit) {
+    let added = false;
+
+    for (const bucket of buckets) {
+      if (bucket[round]) {
+        mixedProducts.push(bucket[round]);
+        added = true;
+
+        if (mixedProducts.length >= limit) break;
+      }
+    }
+
+    if (!added) break;
+    round++;
+  }
+
+  return mixedProducts;
+}
 
 const PORT = process.env.PORT || 3000;
 
