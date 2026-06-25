@@ -81,17 +81,20 @@ function cleanProduct(item) {
     "";
 
   return {
-    id: p.id,
-    name: p.name || "",
-    price: Number(p.unit_price || 0),
-    image,
-    url: `${WEBSITE_URL}/contents/product_view/${p.id}`,
-    brand: p.brand || "",
-    category: p.category || "",
-    availabe_online: p.availabe_online,
-    status: p.status,
-    deactivate: p.deactivate
-  };
+  id: p.id,
+  name: p.name || "",
+  price: Number(p.unit_price || 0),
+  image,
+  url: `${WEBSITE_URL}/contents/product_view/${p.id}`,
+  brand: p.brand || "",
+  category: p.category || "",
+  stock_balance: Number(p.stock_balance || 0),
+  availabe_online: p.availabe_online,
+  status: p.status,
+  deactivate: p.deactivate,
+  currency: "USD",
+  add_to_cart: true
+};
 }
 
 function isOnlineProduct(item) {
