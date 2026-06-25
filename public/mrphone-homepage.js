@@ -82,7 +82,11 @@ window.MrPhone = {
     const wrapper = document.getElementById(item.wrapper);
     if (!wrapper) return;
 
-    wrapper.innerHTML = `<div class="mrp-loading">Loading products...</div>`;
+    wrapper.innerHTML = `<div class="mrp-loadwrapper.innerHTML = `
+  <div class="mrp-loading">
+    <span></span><span></span><span></span><span></span>
+  </div>
+`;ing">Loading products...</div>`;
 
     try {
       const data = await this.getProducts(item.cats, 16);
