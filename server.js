@@ -176,6 +176,64 @@ const cleanProducts = allProducts
   }
 });
 
+app.get("/api/homepage-section", async (req, res) => {
+  try {
+    const cats = String(req.query.cats || "")
+      .split(",")
+      .map(x => x.trim())
+      .filter(Boolean);
+
+    const limit = Number(req.query.limit || 12);
+
+    if (!cats.length) {
+      return res.status(400).json({
+        error: true,
+        message: "Missing cats parameter"
+      });
+    }
+
+    const cacheKey = `section_${cats.join("_")}_${limit}`;
+    const cached = cache.get(cacheKey);
+
+    if (cached) {
+      return res.json({ cached: true, products: cached });
+    }
+
+    let allProducts = [];
+
+    for (const catId of cats) {
+      const products = await fetchDaftraProductsByCategory(catId, 20);
+      allProducts = allProducts.concat(products);
+    }
+
+    const seen = new Set();
+
+    const cleanProducts = allProducts
+      .filter(isOnlineProduct)
+      .map(cleanProduct)
+      .filter(p => {
+        if (!p.id || !p.name || !p.image) return false;
+        if (seen.has(String(p.id))) return false;
+        seen.add(String(p.id));
+        return true;
+      })
+      .slice(0, limit);
+
+    cache.set(cacheKey, cleanProducts);
+
+    res.json({
+      cached: false,
+      products: cleanProducts
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      error: true,
+      message: error.response?.data || error.message
+    });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
