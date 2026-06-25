@@ -12,7 +12,7 @@ const WEBSITE_URL = "https://www.mrphonelb.com";
 const DAFTRA_API_URL = process.env.DAFTRA_API_URL || "https://www.mrphonelb.com/api2";
 const DAFTRA_API_TOKEN = process.env.DAFTRA_API_TOKEN;
 
-const cache = new NodeCache({ stdTTL: 600 }); // 10 minutes
+const cache = new NodeCache({ stdTTL: 120 });
 
 app.get("/", (req, res) => {
   res.json({
