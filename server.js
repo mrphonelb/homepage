@@ -6,6 +6,7 @@ const NodeCache = require("node-cache");
 
 const app = express();
 app.use(cors());
+app.use("/js", express.static("public"));
 
 const WEBSITE_URL = "https://www.mrphonelb.com";
 const DAFTRA_API_URL = process.env.DAFTRA_API_URL || "https://www.mrphonelb.com/api2";
