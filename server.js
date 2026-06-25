@@ -238,6 +238,15 @@ app.get("/api/homepage-section", async (req, res) => {
   }
 });
 
+app.get("/api/refresh-cache", (req, res) => {
+  cache.flushAll();
+
+  res.json({
+    success: true,
+    message: "Homepage cache cleared successfully"
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
