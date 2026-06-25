@@ -79,53 +79,53 @@ window.MrPhone = {
   },
 
   async loadCarousel(item) {
-    const wrapper = document.getElementById(item.wrapper);
-    if (!wrapper) return;
+  const wrapper = document.getElementById(item.wrapper);
+  if (!wrapper) return;
 
-    wrapper.innerHTML = `<div class="mrp-loadwrapper.innerHTML = `
-  <div class="mrp-loading">
-    <span></span><span></span><span></span><span></span>
-  </div>
-`;ing">Loading products...</div>`;
+  wrapper.innerHTML = `
+    <div class="mrp-loading">
+      <span></span><span></span><span></span><span></span>
+    </div>
+  `;
 
-    try {
-      const data = await this.getProducts(item.cats, 16);
-      const products = data.products || [];
+  try {
+    const data = await this.getProducts(item.cats, 16);
+    const products = data.products || [];
 
-      if (!products.length) {
-        wrapper.innerHTML = `<div class="mrp-loading">No products available.</div>`;
-        return;
-      }
-
-      wrapper.innerHTML = products.map(p => this.productCard(p)).join("");
-
-      new Swiper("#" + item.swiperId, {
-        slidesPerView: 6,
-        spaceBetween: 20,
-        loop: false,
-        grabCursor: true,
-        autoplay: {
-          delay: 4000,
-          disableOnInteraction: false
-        },
-        navigation: {
-          nextEl: "#" + item.next,
-          prevEl: "#" + item.prev
-        },
-        breakpoints: {
-          0: { slidesPerView: 1, spaceBetween: 10 },
-          600: { slidesPerView: 2, spaceBetween: 10 },
-          900: { slidesPerView: 3, spaceBetween: 15 },
-          1100: { slidesPerView: 4, spaceBetween: 15 },
-          1600: { slidesPerView: 5, spaceBetween: 15 }
-        }
-      });
-
-    } catch (err) {
-      console.error(err);
-      wrapper.innerHTML = `<div class="mrp-loading mrp-error">Error loading products.</div>`;
+    if (!products.length) {
+      wrapper.innerHTML = `<div class="mrp-loading-text">No products available.</div>`;
+      return;
     }
-  },
+
+    wrapper.innerHTML = products.map(p => this.productCard(p)).join("");
+
+    new Swiper("#" + item.swiperId, {
+      slidesPerView: 6,
+      spaceBetween: 20,
+      loop: false,
+      grabCursor: true,
+      autoplay: {
+        delay: 4000,
+        disableOnInteraction: false
+      },
+      navigation: {
+        nextEl: "#" + item.next,
+        prevEl: "#" + item.prev
+      },
+      breakpoints: {
+        0: { slidesPerView: 1, spaceBetween: 10 },
+        600: { slidesPerView: 2, spaceBetween: 10 },
+        900: { slidesPerView: 3, spaceBetween: 15 },
+        1100: { slidesPerView: 4, spaceBetween: 15 },
+        1600: { slidesPerView: 5, spaceBetween: 15 }
+      }
+    });
+
+  } catch (err) {
+    console.error(err);
+    wrapper.innerHTML = `<div class="mrp-loading-text mrp-error">Error loading products.</div>`;
+  }
+},
 
   loadAllCarousels() {
     this.carousels.forEach((item, index) => {
