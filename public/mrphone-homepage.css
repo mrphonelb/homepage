@@ -192,3 +192,10 @@
     font-size:22px;
   }
 }
+
+.category-divider{
+    flex:1;
+    height:1px;
+    background:#d8d8d8;
+    margin:0 24px;
+}
