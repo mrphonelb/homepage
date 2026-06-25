@@ -147,12 +147,19 @@ app.get("/api/homepage-json/mobiles", async (req, res) => {
 
       if (allProducts.length >= 30) break;
     }
+    
+const seen = new Set();
 
-    const cleanProducts = allProducts
-      .filter(isOnlineProduct)
-      .map(cleanProduct)
-      .filter(p => p.id && p.name && p.image)
-      .slice(0, 12);
+const cleanProducts = allProducts
+  .filter(isOnlineProduct)
+  .map(cleanProduct)
+  .filter(p => {
+    if (!p.id || !p.name || !p.image) return false;
+    if (seen.has(String(p.id))) return false;
+    seen.add(String(p.id));
+    return true;
+  })
+  .slice(0, 12);
 
     cache.set(cacheKey, cleanProducts);
 
