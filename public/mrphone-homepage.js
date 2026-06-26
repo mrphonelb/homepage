@@ -61,7 +61,7 @@ window.MrPhone = {
 
           <a href="${url}" data-product-name="${name}" class="mrp-fast-link">
             <div class="mrp-fast-img-wrap">
-              <img src="${image}" alt="${name}" loading="lazy">
+              <img src="${image}" alt="${name}" loading="eager" fetchpriority="high" decoding="async">
             </div>
             <h6>${name}</h6>
           </a>
