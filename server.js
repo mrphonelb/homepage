@@ -106,32 +106,71 @@ async function buildHomepageSection(cats, limit) {
   return shuffleArray(allProducts).slice(0, limit);
 }
 
-async function prepareNextHomepageCache() {
-  console.log("Preparing next homepage products...");
+let LIVE_CACHE = {};
+let NEXT_CACHE = {};
+let isBuildingNext = false;
 
-  const nextCache = {};
+async function buildFullHomepageCache() {
+  const newCache = {};
 
   for (const section of HOMEPAGE_SECTIONS) {
-    try {
-      const key = cacheKeyFor(section.cats, section.limit);
-      const products = await buildHomepageSection(section.cats, section.limit);
+    const key = cacheKeyFor(section.cats, section.limit);
+    const products = await buildHomepageSection(section.cats, section.limit);
 
-      nextCache[key] = {
-        products,
-        createdAt: Date.now()
-      };
+    newCache[key] = {
+      products,
+      createdAt: Date.now()
+    };
 
-      console.log(`Prepared ${section.key}: ${products.length} products`);
-    } catch (err) {
-      console.error(`Failed preparing ${section.key}:`, err.message);
-    }
+    console.log(`Prepared ${section.key}: ${products.length} products`);
   }
 
-  Object.keys(nextCache).forEach(key => {
-    cache.set(key, nextCache[key]);
+  return newCache;
+}
+
+async function buildNextVersion() {
+  if (isBuildingNext) return;
+
+  isBuildingNext = true;
+
+  try {
+    console.log("Building NEXT homepage version...");
+    NEXT_CACHE = await buildFullHomepageCache();
+    console.log("NEXT homepage version is ready.");
+  } catch (err) {
+    console.error("Failed building NEXT version:", err.message);
+  } finally {
+    isBuildingNext = false;
+  }
+}
+
+function publishNextVersion() {
+  if (!NEXT_CACHE || !Object.keys(NEXT_CACHE).length) {
+    console.log("NEXT cache is not ready. Keeping LIVE version.");
+    return;
+  }
+
+  LIVE_CACHE = NEXT_CACHE;
+  NEXT_CACHE = {};
+
+  Object.keys(LIVE_CACHE).forEach(key => {
+    cache.set(key, LIVE_CACHE[key]);
   });
 
-  console.log("Homepage products swapped successfully");
+  console.log("LIVE homepage version swapped successfully.");
+}
+
+async function homepageCacheCycle() {
+  await buildNextVersion();
+
+  publishNextVersion();
+
+  buildNextVersion();
+
+  setInterval(() => {
+    publishNextVersion();
+    buildNextVersion();
+  }, 5 * 60 * 1000);
 }
 
 app.get("/api/homepage-section", async (req, res) => {
@@ -171,6 +210,7 @@ app.get("/api/homepage-section", async (req, res) => {
       cached: false,
       products
     });
+
   } catch (error) {
     res.status(500).json({
       error: true,
@@ -181,7 +221,8 @@ app.get("/api/homepage-section", async (req, res) => {
 
 app.get("/api/refresh-cache", async (req, res) => {
   try {
-    await prepareNextHomepageCache();
+    await buildNextVersion();
+    publishNextVersion();
 
     res.json({
       success: true,
@@ -209,10 +250,5 @@ const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
-
-  await prepareNextHomepageCache();
-
-  setInterval(() => {
-    prepareNextHomepageCache();
-  }, 5 * 60 * 1000);
+  homepageCacheCycle();
 });
