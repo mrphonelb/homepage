@@ -200,17 +200,10 @@ app.get("/api/homepage-section", async (req, res) => {
       });
     }
 
-    const products = await buildHomepageSection(cats, limit);
-
-    cache.set(key, {
-      products,
-      createdAt: Date.now()
-    });
-
-    res.json({
-      cached: false,
-      products
-    });
+    return res.status(503).json({
+  error: true,
+  message: "Homepage cache is warming up. Please refresh in a few seconds."
+});
 
   } catch (error) {
     res.status(500).json({
