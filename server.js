@@ -161,34 +161,22 @@ function publishNextVersion() {
 }
 
 async function homepageCacheCycle() {
- await buildNextVersion();
-
-publishNextVersion();
-
-// Start building the next version immediately
-await buildNextVersion();
-
-async function homepageCacheCycle() {
   // Build first live version
   await buildNextVersion();
   publishNextVersion();
 
-  // Prepare the next version immediately
+  // Prepare the next version in the background
   buildNextVersion();
 
   setInterval(() => {
-    // Publish only if a next version is already ready
     if (Object.keys(NEXT_CACHE).length) {
       publishNextVersion();
-
-      // Start preparing the following version in the background
       buildNextVersion();
     } else {
       console.log("Next version is still building. Keeping current homepage.");
     }
   }, 5 * 60 * 1000);
 }
-
 app.get("/api/homepage-section", async (req, res) => {
   try {
     const cats = String(req.query.cats || "")
