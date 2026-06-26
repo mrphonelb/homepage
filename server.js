@@ -161,16 +161,17 @@ function publishNextVersion() {
 }
 
 async function homepageCacheCycle() {
-  await buildNextVersion();
+ await buildNextVersion();
 
+publishNextVersion();
+
+// Start building the next version immediately
+await buildNextVersion();
+
+setInterval(async () => {
   publishNextVersion();
-
-  buildNextVersion();
-
-  setInterval(() => {
-    publishNextVersion();
-    buildNextVersion();
-  }, 5 * 60 * 1000);
+  await buildNextVersion();
+}, 5 * 60 * 1000);
 }
 
 app.get("/api/homepage-section", async (req, res) => {
