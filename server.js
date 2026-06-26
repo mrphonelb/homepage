@@ -330,6 +330,50 @@ async function buildHomepageSection(cats, limit) {
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+const HOMEPAGE_SECTIONS = [
+  { key:"carousel1", cats:[6,134,274,135], limit:16 },
+  { key:"carousel2", cats:[257,143,348,281,272], limit:16 },
+  { key:"carousel3", cats:[48,402,82,80,18], limit:16 },
+  { key:"carousel4", cats:[241,142,389,306,313], limit:16 },
+  { key:"carousel5", cats:[130,252,56,140,285], limit:16 },
+  { key:"carousel6", cats:[117,236,42,41], limit:16 },
+  { key:"carousel7", cats:[54,55,401], limit:16 },
+  { key:"carousel8", cats:[28,27,320,428,321,322,325,373,58,234,319,77,69], limit:16 },
+  { key:"carousel9", cats:[422,423,412,414,415,418,419,416,420], limit:16 },
+  { key:"carousel10", cats:[20,21,29,14,359,75,52], limit:16 },
+  { key:"carousel11", cats:[66,123,68,79,124], limit:16 },
+  { key:"carousel12", cats:[237,316,32,33], limit:16 }
+];
+
+async function preloadHomepageCache() {
+  console.log("Preloading homepage cache...");
+
+  for (const section of HOMEPAGE_SECTIONS) {
+    try {
+      const cacheKey = `section_html_${section.cats.join("_")}_${section.limit}`;
+      const products = await buildHomepageSection(section.cats.map(String), section.limit);
+
+      cache.set(cacheKey, {
+        products,
+        createdAt: Date.now(),
+        refreshing: false
+      });
+
+      console.log(`Cached ${section.key}: ${products.length} products`);
+    } catch (err) {
+      console.error(`Failed caching ${section.key}:`, err.message);
+    }
+  }
+
+  console.log("Homepage cache preload finished");
+}
+
+app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
+
+  await preloadHomepageCache();
+
+  setInterval(() => {
+    preloadHomepageCache();
+  }, 5 * 60 * 1000);
 });
