@@ -114,20 +114,28 @@ async function buildFullHomepageCache() {
   const newCache = {};
 
   for (const section of HOMEPAGE_SECTIONS) {
-    const key = cacheKeyFor(section.cats, section.limit);
-    const products = await buildHomepageSection(section.cats, section.limit);
+    try {
+      const key = cacheKeyFor(section.cats, section.limit);
+      const products = await buildHomepageSection(section.cats, section.limit);
 
-    newCache[key] = {
-      products,
-      createdAt: Date.now()
-    };
+      if (products.length) {
+        newCache[key] = {
+          products,
+          createdAt: Date.now()
+        };
 
-    console.log(`Prepared ${section.key}: ${products.length} products`);
+        console.log(`Prepared ${section.key}: ${products.length} products`);
+      } else {
+        console.log(`Skipped ${section.key}: no products found`);
+      }
+
+    } catch (err) {
+      console.error(`Failed preparing ${section.key}:`, err.message);
+    }
   }
 
   return newCache;
 }
-
 async function buildNextVersion() {
   if (isBuildingNext) return;
 
@@ -203,7 +211,22 @@ app.get("/api/homepage-section", async (req, res) => {
       });
     }
 
-    return res.status(503).json({
+  const products = await buildHomepageSection(cats, limit);
+
+if (products.length) {
+  cache.set(key, {
+    products,
+    createdAt: Date.now()
+  });
+
+  return res.json({
+    cached: false,
+    emergency_build: true,
+    products
+  });
+}
+
+return res.status(503).json({
   error: true,
   message: "Homepage cache is warming up. Please refresh in a few seconds."
 });
